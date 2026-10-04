@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { ApiResponse, AuthResponse, UserInfo } from '../models/api.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +14,7 @@ export class AuthService {
 
   private readonly tokenKey = 'portfolio_ai_token';
   private readonly userKey = 'portfolio_ai_user';
-  private readonly apiUrl = 'http://localhost:5000/api/auth';
+  private readonly apiUrl = `${environment.apiUrl}/auth`;
 
   token = signal<string | null>(this.getStoredToken());
   currentUser = signal<UserInfo | null>(this.getStoredUser());

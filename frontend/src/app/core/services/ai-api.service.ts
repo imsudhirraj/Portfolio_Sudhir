@@ -4,13 +4,14 @@ import { Observable } from 'rxjs';
 import { ApiResponse } from '../models/api.model';
 import { AiAnalysisResult, ApplySuggestionsRequest } from '../models/ai.model';
 import { Portfolio } from '../models/portfolio.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AiApiService {
   private http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5000/api/ai';
+  private readonly baseUrl = `${environment.apiUrl}/ai`;
 
   getLatestAnalysis(): Observable<ApiResponse<AiAnalysisResult>> {
     return this.http.get<ApiResponse<AiAnalysisResult>>(`${this.baseUrl}/latest-analysis`);

@@ -1,0 +1,181 @@
+{
+  "profile": {
+    "fullName": "Sudhir Raj",
+    "professionalTitle": "Senior Software Engineer",
+    "email": "sudhir.raj@example.com",
+    "phone": "",
+    "location": "Bengaluru, India",
+    "profileImage": "",
+    "linkedin": "https://linkedin.com/in/sudhir-raj",
+    "github": "https://github.com/sudhir-raj",
+    "website": "https://portfolioai.com/u/sudhir-raj"
+  },
+  "summary": {
+    "title": "About Me",
+    "content": "Passionate full-stack software engineer with expertise in modern web architectures, distributed backend systems, and AI integration. Dedicated to building reliable, high-performance, and beautifully engineered user experiences."
+  },
+  "skills": [
+    {
+      "id": "c853c8bb578442c49604242a74bb21dc",
+      "name": "C# / .NET 9",
+      "category": "Backend",
+      "level": "Expert"
+    },
+    {
+      "id": "69864644a7bf46c4a99009258fb5a36d",
+      "name": "ASP.NET Core Web API",
+      "category": "Backend",
+      "level": "Expert"
+    },
+    {
+      "id": "9b10dbcf0aaa45d59e1f8a5e1d3c69a5",
+      "name": "Angular \u0026 TypeScript",
+      "category": "Frontend",
+      "level": "Advanced"
+    },
+    {
+      "id": "6a2bf51879fc4811af8f501afc60090e",
+      "name": "Microservices Architecture",
+      "category": "Backend",
+      "level": "Advanced"
+    },
+    {
+      "id": "70c4487dfdc9483d95f12d27cf2257b8",
+      "name": "PostgreSQL \u0026 SQL Server",
+      "category": "Database",
+      "level": "Advanced"
+    },
+    {
+      "id": "3581f92af75d48b49fb44816a812531a",
+      "name": "Docker \u0026 Kubernetes",
+      "category": "DevOps",
+      "level": "Intermediate"
+    },
+    {
+      "id": "08d670f40ffe4156808123f080cff6ca",
+      "name": "AWS / Azure Cloud",
+      "category": "Cloud",
+      "level": "Advanced"
+    },
+    {
+      "id": "6cd07d8d096c485da21548c8a8c8ca28",
+      "name": "LLM \u0026 AI Integration",
+      "category": "Other",
+      "level": "Intermediate"
+    }
+  ],
+  "experience": [
+    {
+      "id": "6d792e36242b4ac4b865f6219c6b35b5",
+      "company": "Tech Innovators Inc.",
+      "jobTitle": "Senior Full Stack Engineer",
+      "location": "Bengaluru, India",
+      "startDate": "2022-03",
+      "endDate": "Present",
+      "isCurrent": true,
+      "description": "Leading architecture and development of scalable cloud-native microservices and responsive web applications.",
+      "responsibilities": [
+        "Architected and deployed high-throughput ASP.NET Core APIs handling 10M\u002B daily events.",
+        "Mentored junior engineers and instituted code review standards and automated CI/CD pipelines.",
+        "Modernized frontend applications to Angular standalone architecture with Signals."
+      ],
+      "achievements": [
+        "Reduced end-to-end API response latency by 42% through caching and query optimization.",
+        "Designed zero-downtime deployment pipelines reducing deployment cycle time from hours to minutes."
+      ],
+      "technologies": [
+        "C#",
+        ".NET 9",
+        "Angular",
+        "Docker",
+        "AWS",
+        "Redis"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "01069232d14c40a48f8a0b45115af396",
+      "name": "PortfolioAI Platform",
+      "description": "An AI-powered, database-free portfolio builder SaaS that converts resumes into interactive, publication-ready portfolios.",
+      "role": "Lead Architect \u0026 Developer",
+      "technologies": [
+        "Angular 20",
+        ".NET 9",
+        "C#",
+        "AI LLM",
+        "SCSS",
+        "JSON File Persistence"
+      ],
+      "responsibilities": [
+        "Designed atomic JSON file storage engine with automatic backup rotation.",
+        "Built multi-theme responsive rendering engine supporting desktop, tablet, and mobile previews."
+      ],
+      "achievements": [
+        "Zero-database footprint with high throughput and instant cold-start loading."
+      ],
+      "projectUrl": "https://portfolioai.com",
+      "githubUrl": "https://github.com/sudhir-raj/portfolio-ai",
+      "isFeatured": true
+    }
+  ],
+  "education": [
+    {
+      "id": "42b280c244124ecc823d4f406aff15ef",
+      "institution": "National Institute of Technology",
+      "degree": "Bachelor of Technology",
+      "fieldOfStudy": "Computer Science and Engineering",
+      "startDate": "2016",
+      "endDate": "2020",
+      "grade": "8.8 / 10 CGPA",
+      "activities": ""
+    }
+  ],
+  "certifications": [
+    {
+      "id": "7ab3e141097a49c9a6101019dae27217",
+      "name": "AWS Certified Solutions Architect - Associate",
+      "issuer": "Amazon Web Services",
+      "issueDate": "2023-05",
+      "expiryDate": "2026-05",
+      "credentialUrl": "",
+      "credentialId": ""
+    }
+  ],
+  "socialLinks": [],
+  "sections": {
+    "hero": true,
+    "about": true,
+    "skills": true,
+    "experience": true,
+    "projects": true,
+    "education": true,
+    "certifications": false,
+    "contact": true,
+    "sectionOrder": [
+      "hero",
+      "about",
+      "skills",
+      "experience",
+      "projects",
+      "education",
+      "certifications",
+      "contact"
+    ]
+  },
+  "theme": {
+    "name": "developer",
+    "primaryColor": "#3b82f6",
+    "accentColor": "#8b5cf6",
+    "font": "Inter",
+    "backgroundStyle": "default",
+    "borderRadius": "md",
+    "buttonStyle": "filled",
+    "sectionSpacing": "normal"
+  },
+  "publication": {
+    "isPublished": false,
+    "slug": "sudhir-raj"
+  },
+  "updatedAtUtc": "2026-10-04T06:31:40.3807688Z"
+}

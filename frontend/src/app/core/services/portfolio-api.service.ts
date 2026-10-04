@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse } from '../models/api.model';
 import { Portfolio, Profile, Summary, ThemeConfig, SectionsConfig, PublicationConfig, PublicPortfolio } from '../models/portfolio.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PortfolioApiService {
   private http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5000/api';
+  private readonly baseUrl = environment.apiUrl;
 
   getPortfolio(): Observable<ApiResponse<Portfolio>> {
     return this.http.get<ApiResponse<Portfolio>>(`${this.baseUrl}/portfolio`);

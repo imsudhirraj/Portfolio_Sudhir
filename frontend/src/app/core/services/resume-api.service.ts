@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse } from '../models/api.model';
 import { AiAnalysisResult } from '../models/ai.model';
+import { environment } from '../../../environments/environment';
 
 export interface StoredResumeInfo {
   exists: boolean;
@@ -16,7 +17,7 @@ export interface StoredResumeInfo {
 })
 export class ResumeApiService {
   private http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5000/api/resume';
+  private readonly baseUrl = `${environment.apiUrl}/resume`;
 
   upload(file: File): Observable<ApiResponse<any>> {
     const formData = new FormData();

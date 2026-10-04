@@ -1,0 +1,302 @@
+{
+  "analysisId": "d748971ff21444039ef28365c0489013",
+  "analyzedAtUtc": "2026-10-04T07:11:31.0628419Z",
+  "profile": {
+    "fullName": {
+      "value": "Sudhir Raj",
+      "confidence": 0,
+      "sourceSnippet": "Sudhir Raj"
+    },
+    "professionalTitle": {
+      "value": "Software Developer",
+      "confidence": 1,
+      "sourceSnippet": "Software Developer"
+    },
+    "email": {
+      "value": "itssudhirraj@gmail.com",
+      "confidence": 0,
+      "sourceSnippet": "itssudhirraj@gmail.com"
+    },
+    "phone": {
+      "value": "\u002B91 7903024321",
+      "confidence": 1,
+      "sourceSnippet": "\u002B91 7903024321"
+    },
+    "location": {
+      "value": "Mumbai, India",
+      "confidence": 0,
+      "sourceSnippet": "Mumbai, India"
+    },
+    "linkedin": {
+      "value": "https://linkedin.com/in/sudhir-raj-6a6a24b6",
+      "confidence": 0,
+      "sourceSnippet": "linkedin.com/in/sudhir-raj-6a6a24b6"
+    },
+    "github": {
+      "value": "https://github.com/imsudhirraj",
+      "confidence": 0,
+      "sourceSnippet": "github.com/imsudhirraj"
+    },
+    "website": {
+      "confidence": 1
+    }
+  },
+  "summary": {
+    "content": {
+      "value": "Software Developer with 3\u002B years of experience engineering enterprise web applications using C#, ASP.NET Core, and Angular. Specializes in building secure RESTful APIs, optimizing relational database queries in Oracle and SQL Server, and delivering maintainable frontend architectures. Experienced across agile development cycles from architectural design to production deployment.",
+      "confidence": 0,
+      "sourceSnippet": "Software Developer with 3\u002B years of experience engineering enterprise web applications using C#,"
+    }
+  },
+  "skills": [
+    {
+      "id": "5e12a9d623e34860b30eecdb108a3cce",
+      "name": "C#",
+      "category": "Backend",
+      "level": "Expert",
+      "confidence": 0
+    },
+    {
+      "id": "2eb1579b03154519b3508cde2e979159",
+      "name": "ASP.NET",
+      "category": "Backend",
+      "level": "Expert",
+      "confidence": 0
+    },
+    {
+      "id": "9c653781cd734eaaa8cbe06cd1d9e9e7",
+      "name": "ASP.NET Core",
+      "category": "Backend",
+      "level": "Expert",
+      "confidence": 0
+    },
+    {
+      "id": "ed8e4feab11140248a0aa526b4ceb6a4",
+      "name": "Angular",
+      "category": "Frontend",
+      "level": "Expert",
+      "confidence": 0
+    },
+    {
+      "id": "8ccd629d80b64a1385f9b6ccb03721ed",
+      "name": "TypeScript",
+      "category": "Frontend",
+      "level": "Expert",
+      "confidence": 0
+    },
+    {
+      "id": "a877b94a22c844d39fa3a95205b296e7",
+      "name": "SQL Server",
+      "category": "Database",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "7ff32de6fcf24eae8282edb7d84584b8",
+      "name": "CI/CD",
+      "category": "DevOps",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "815ff3f6df094984a0a64d9b1d95d507",
+      "name": "Git",
+      "category": "Tools",
+      "level": "Expert",
+      "confidence": 0
+    },
+    {
+      "id": "a1e3e07a374148549df45fda61f845e0",
+      "name": "GitHub",
+      "category": "Tools",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "52e0254af8414b1d9215ab560d2a8d87",
+      "name": "JWT",
+      "category": "Security",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "ea6ddbf0a4304fbeb8361cb27ffdd5c2",
+      "name": "SQL",
+      "category": "Backend",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "2efc3e3c040e405ea2dc8424bf0c32e4",
+      "name": "Entity Framework Core",
+      "category": "Frontend",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "2026b5a623f146069a33d8db6849e8f1",
+      "name": "Antigravity",
+      "category": "Frontend",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "d1d6993c74db4584bc0308a33c96cba6",
+      "name": "Oracle Database",
+      "category": "Database",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "a191eb3c96474275a9a089757599a1f9",
+      "name": "REST APIs",
+      "category": "Other",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "6426964e7761447b91d71e4fb153c429",
+      "name": "Postman",
+      "category": "Tools",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "efd9ef1d72e044dfb1800da63ce19b0c",
+      "name": "Git Action",
+      "category": "DevOps",
+      "level": "Advanced",
+      "confidence": 0
+    },
+    {
+      "id": "cc4c67953fea43aab633dfc8d62dc5df",
+      "name": "Antigravity AI",
+      "category": "Other",
+      "level": "Advanced",
+      "confidence": 0
+    }
+  ],
+  "experience": [
+    {
+      "id": "0d67d32f5eff437993e1faeaf192197a",
+      "company": "Wipro Ltd",
+      "jobTitle": "Software Developer",
+      "location": "Mumbai, India",
+      "startDate": "2024-07",
+      "endDate": "01-01-2027",
+      "isCurrent": false,
+      "description": "Developed backend services and REST APIs using ASP.NET Core to support banking transaction",
+      "responsibilities": [
+        "Developed backend services and REST APIs using ASP.NET Core to support banking transaction",
+        "workflows and accounting reconciliation modules.",
+        "Engineered responsive single-page application features using Angular (v16-v18) and TypeScript,",
+        "implementing reactive forms and state management.",
+        "Wrote and tuned stored procedures, complex joins, and query execution plans in Oracle Database,",
+        "reducing data processing turnaround times.",
+        "Engineered Migration of web form ASP.NET application into ASP.NET core web application.",
+        "Collaborated with product managers and QA engineers in bi-weekly sprint cycles to translate business",
+        "specifications into technical requirements.",
+        "Resolved multiple critical production issue.",
+        "Key Impact: Migrated legacy batch-processing jobs into asynchronous background services, eliminating",
+        "UI request timeouts during peak month-end reconciliations."
+      ],
+      "achievements": [],
+      "technologies": [
+        "C#",
+        "ASP.NET Core",
+        "Angular",
+        "Oracle SQL",
+        "REST APIs",
+        "Git",
+        "CI/CD Pipeline"
+      ],
+      "confidence": 0
+    },
+    {
+      "id": "b7525a35a10d42c09559560be41dcffb",
+      "company": "R24 Bharat",
+      "jobTitle": "Associate Software Developer",
+      "location": "Jharkhand, India",
+      "startDate": "2022-09",
+      "endDate": "2024-03",
+      "isCurrent": false,
+      "description": "Implemented business logic and CRUD endpoints in news publishing system.",
+      "responsibilities": [
+        "Implemented business logic and CRUD endpoints in news publishing system.",
+        "Engineered \u0000 Built features for content management including image and text-based news posting.",
+        "Maintained database schema migrations and relational tables using SQL Server.",
+        "Resolved critical production defects identified in error monitoring tools, conducting root-cause",
+        "investigations and deploying hotfixes.",
+        "Key Impact: Streamlined Git version control workflows and branch protection policies for an engineering",
+        "team of 3 developers."
+      ],
+      "achievements": [],
+      "technologies": [
+        "C#",
+        "ASP.NET Core",
+        "Angular",
+        "SQL Server",
+        "Entity Framework",
+        "Git",
+        "Swagger"
+      ],
+      "confidence": 0
+    }
+  ],
+  "projects": [
+    {
+      "id": "51a7cb04985248988647d3dd8cb3dc65",
+      "name": "PG Management",
+      "description": "Full-stack audit tracking application providing audit logs, compliance reports, and role-based permissions. Engineered JWT-based token authentication with secure refresh token rotation and granular claims verification.",
+      "role": "",
+      "technologies": [
+        "C#",
+        "ASP.NET Core",
+        "SQL Server",
+        "Git"
+      ],
+      "responsibilities": [],
+      "achievements": [],
+      "projectUrl": "",
+      "githubUrl": "https://github.com/imsudhirraj/PG_Management_App",
+      "confidence": 0
+    }
+  ],
+  "education": [
+    {
+      "id": "60f2003c9e4e4981908e37bb4f90e566",
+      "institution": "Visvesvaraya Technological University,",
+      "degree": "Bachelor of Engineering",
+      "fieldOfStudy": "Computer Science and Engineering",
+      "startDate": "2016-08",
+      "endDate": "2019-08",
+      "grade": "GPA: 6.7 / 10.0 \u2022 First Class",
+      "activities": "",
+      "confidence": 0
+    },
+    {
+      "id": "cf56bc48252b40bca3efe07f49971ac3",
+      "institution": "SBTE Ranchi, Jharkhand, Jharkhand, India",
+      "degree": "Diploma of Engineering",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-08",
+      "endDate": "2015-07",
+      "grade": "GPA: 7.33/10.0 \u2022 First Class",
+      "activities": "",
+      "confidence": 0
+    }
+  ],
+  "certifications": [
+    {
+      "id": "ac161bbcafcd47df800bcaa09bd6be8f",
+      "name": "JUNIOR SOFTWARE DEVELOPER",
+      "issuer": "NASSCOM",
+      "issueDate": "2018-01",
+      "expiryDate": "",
+      "credentialUrl": "",
+      "credentialId": "",
+      "confidence": 0
+    }
+  ],
+  "totalExtractedItems": 25
+}

@@ -2,13 +2,14 @@ import { Injectable, signal, effect, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UserSettings } from '../models/settings.model';
 import { ApiResponse } from '../models/api.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
   private http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:5000/api/settings';
+  private readonly apiUrl = `${environment.apiUrl}/settings`;
   private readonly storageKey = 'portfolio_ai_theme_mode';
 
   currentMode = signal<'dark' | 'light'>('dark');
