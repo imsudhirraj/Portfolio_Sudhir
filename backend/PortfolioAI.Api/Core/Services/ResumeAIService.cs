@@ -514,45 +514,44 @@ public partial class ResumeAIService : IResumeAIService
 
     private static void ExtractSections(List<string> lines, AiAnalysisResult result)
     {
+        // Try extracting Location if not yet found
+        if (result.Profile.Location.Value == null)
+        {
+            foreach (var line in lines.Take(5))
+            {
+                var parts = line.Split(new[] { '•', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var part in parts)
+                {
+                    var p = part.Trim();
+                    if (EmailRegex().IsMatch(p) || PhoneRegex().IsMatch(p) || p.Contains("github.com") || p.Contains("linkedin.com"))
+                    {
+                        continue;
+                    }
+                    if (p.Length is >= 3 and <= 60 && (p.Contains(',') || p.Contains("India") || p.Contains("USA") || p.Contains("Remote") || p.Contains("United States")))
+                    {
+                        result.Profile.Location = new ExtractedField<string>
+                        {
+                            Value = p.TrimEnd('•', '|', ' ', ','),
+                            Confidence = ConfidenceLevel.High,
+                            SourceSnippet = p
+                        };
+                        break;
+                    }
+                }
+                if (result.Profile.Location.Value != null) break;
+            }
+        }
+
         string? currentSection = null;
         var sectionBuffer = new List<string>();
 
         foreach (var line in lines)
         {
-            var lower = line.Trim().ToLowerInvariant();
-
-            if (lower is "experience" or "work experience" or "employment history" or "professional experience")
+            var detected = DetectSectionHeader(line);
+            if (detected != null)
             {
                 ProcessSectionBuffer(currentSection, sectionBuffer, result);
-                currentSection = "experience";
-                sectionBuffer.Clear();
-                continue;
-            }
-            if (lower is "education" or "academic background" or "qualifications")
-            {
-                ProcessSectionBuffer(currentSection, sectionBuffer, result);
-                currentSection = "education";
-                sectionBuffer.Clear();
-                continue;
-            }
-            if (lower is "projects" or "personal projects" or "key projects")
-            {
-                ProcessSectionBuffer(currentSection, sectionBuffer, result);
-                currentSection = "projects";
-                sectionBuffer.Clear();
-                continue;
-            }
-            if (lower is "summary" or "professional summary" or "about me" or "objective")
-            {
-                ProcessSectionBuffer(currentSection, sectionBuffer, result);
-                currentSection = "summary";
-                sectionBuffer.Clear();
-                continue;
-            }
-            if (lower is "certifications" or "licenses & certifications")
-            {
-                ProcessSectionBuffer(currentSection, sectionBuffer, result);
-                currentSection = "certifications";
+                currentSection = detected;
                 sectionBuffer.Clear();
                 continue;
             }
@@ -563,9 +562,41 @@ public partial class ResumeAIService : IResumeAIService
         ProcessSectionBuffer(currentSection, sectionBuffer, result);
     }
 
+    private static string? DetectSectionHeader(string line)
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0 || trimmed.Length > 60) return null;
+
+        var clean = Regex.Replace(trimmed, @"[^a-zA-Z\s]", " ");
+        clean = Regex.Replace(clean, @"\s+", " ").Trim().ToLowerInvariant();
+
+        if (clean is "summary" or "professional summary" or "about me" or "profile summary" or "executive summary" or "career summary")
+            return "summary";
+
+        if (clean is "work experience" or "experience" or "professional experience" or "employment history" or "career history")
+            return "experience";
+
+        if (clean is "education" or "education credentials" or "academic background" or "education qualifications" or "qualifications")
+            return "education";
+
+        if (clean is "technical projects" or "projects" or "personal projects" or "key projects" or "featured projects")
+            return "projects";
+
+        if (clean is "core competencies skills" or "skills" or "core competencies" or "technical skills" or "competencies")
+            return "skills";
+
+        if (clean is "certifications" or "licenses certifications" or "certificates" or "credentials")
+            return "certifications";
+
+        if (clean is "key achievements" or "achievements" or "awards" or "languages" or "declaration" or "interests")
+            return "ignore";
+
+        return null;
+    }
+
     private static void ProcessSectionBuffer(string? section, List<string> lines, AiAnalysisResult result)
     {
-        if (string.IsNullOrWhiteSpace(section) || lines.Count == 0)
+        if (string.IsNullOrWhiteSpace(section) || lines.Count == 0 || section == "ignore")
         {
             return;
         }
@@ -582,42 +613,384 @@ public partial class ResumeAIService : IResumeAIService
                 break;
 
             case "experience":
-                result.Experience.Add(new ExtractedExperienceItem
-                {
-                    JobTitle = lines.Count > 0 ? lines[0] : "Software Engineer",
-                    Company = lines.Count > 1 ? lines[1] : "Company",
-                    Description = string.Join(" ", lines.Skip(2)),
-                    Responsibilities = lines.Skip(2).Take(3).ToList(),
-                    Confidence = ConfidenceLevel.Medium
-                });
-                break;
-
-            case "projects":
-                result.Projects.Add(new ExtractedProjectItem
-                {
-                    Name = lines.Count > 0 ? lines[0] : "Project",
-                    Description = string.Join(" ", lines.Skip(1)),
-                    Confidence = ConfidenceLevel.Medium
-                });
+                ParseExperienceSection(lines, result);
                 break;
 
             case "education":
-                result.Education.Add(new ExtractedEducationItem
-                {
-                    Institution = lines.Count > 0 ? lines[0] : "University",
-                    Degree = lines.Count > 1 ? lines[1] : "Bachelor's Degree",
-                    Confidence = ConfidenceLevel.Medium
-                });
+                ParseEducationSection(lines, result);
+                break;
+
+            case "projects":
+                ParseProjectsSection(lines, result);
                 break;
 
             case "certifications":
-                result.Certifications.Add(new ExtractedCertificationItem
-                {
-                    Name = lines.Count > 0 ? lines[0] : "Professional Certification",
-                    Issuer = lines.Count > 1 ? lines[1] : "Issuing Body",
-                    Confidence = ConfidenceLevel.Medium
-                });
+                ParseCertificationsSection(lines, result);
                 break;
+
+            case "skills":
+                ParseExplicitSkillsSection(lines, result);
+                break;
+        }
+    }
+
+    private static void ParseExperienceSection(List<string> lines, AiAnalysisResult result)
+    {
+        var jobBlocks = new List<List<string>>();
+        List<string>? currentBlock = null;
+
+        var dateRangeRegex = new Regex(@"(\d{4}[-/\.]\d{2}|\d{2}[-/\.]\d{2}[-/\.]\d{4}|\w+ \d{4})\s*[-–—]\s*(\d{4}[-/\.]\d{2}|\d{2}[-/\.]\d{2}[-/\.]\d{4}|\w+ \d{4}|Present|Current|\d{2}[-/\.]\d{2}[-/\.]\d{4})", RegexOptions.IgnoreCase);
+
+        foreach (var line in lines)
+        {
+            var isHeader = (line.Contains('|') && (dateRangeRegex.IsMatch(line) || line.Split(' ').Length >= 3)) ||
+                           (!line.StartsWith("Key Impact") && !line.StartsWith("Technologies") && dateRangeRegex.IsMatch(line) && line.Length < 100);
+
+            if (isHeader)
+            {
+                if (currentBlock != null && currentBlock.Count > 0)
+                {
+                    jobBlocks.Add(currentBlock);
+                }
+                currentBlock = [line];
+            }
+            else
+            {
+                currentBlock ??= [];
+                currentBlock.Add(line);
+            }
+        }
+
+        if (currentBlock != null && currentBlock.Count > 0)
+        {
+            jobBlocks.Add(currentBlock);
+        }
+
+        foreach (var block in jobBlocks)
+        {
+            var header = block[0];
+            string title = "Software Engineer";
+            string company = "Company";
+            string? location = null;
+            string? startDate = null;
+            string? endDate = null;
+            bool isCurrent = false;
+
+            var dateMatch = dateRangeRegex.Match(header);
+            if (dateMatch.Success)
+            {
+                startDate = dateMatch.Groups[1].Value.Trim();
+                endDate = dateMatch.Groups[2].Value.Trim();
+                isCurrent = endDate.Equals("Present", StringComparison.OrdinalIgnoreCase) || endDate.Equals("Current", StringComparison.OrdinalIgnoreCase);
+            }
+
+            var cleanHeader = dateMatch.Success ? header.Replace(dateMatch.Value, "").Trim() : header;
+
+            if (cleanHeader.Contains('|'))
+            {
+                var parts = cleanHeader.Split('|', 2);
+                title = parts[0].Trim();
+                var afterPipe = parts[1].Trim();
+                var compParts = afterPipe.Split(new[] { ',' }, 2);
+                company = compParts[0].Trim();
+                if (compParts.Length > 1)
+                {
+                    location = compParts[1].Trim();
+                }
+            }
+            else
+            {
+                title = cleanHeader;
+            }
+
+            var responsibilities = new List<string>();
+            var technologies = new List<string>();
+
+            foreach (var bodyLine in block.Skip(1))
+            {
+                var trimmedBody = bodyLine.Trim();
+                if (trimmedBody.StartsWith("Technologies:", StringComparison.OrdinalIgnoreCase) ||
+                    trimmedBody.StartsWith("Tech Stack:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var techText = trimmedBody.Contains(':') ? trimmedBody[(trimmedBody.IndexOf(':') + 1)..].Trim() : trimmedBody;
+                    technologies = techText.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                           .Select(t => t.Trim())
+                                           .Where(t => !string.IsNullOrWhiteSpace(t))
+                                           .ToList();
+                }
+                else if (trimmedBody.Length > 15)
+                {
+                    var cleanBullet = trimmedBody.TrimStart('•', '-', '*', ' ').Trim();
+                    responsibilities.Add(cleanBullet);
+                }
+            }
+
+            var description = responsibilities.Count > 0 ? responsibilities[0] : $"Software engineering role at {company}.";
+
+            result.Experience.Add(new ExtractedExperienceItem
+            {
+                JobTitle = title,
+                Company = company,
+                Location = location,
+                StartDate = startDate,
+                EndDate = endDate,
+                IsCurrent = isCurrent,
+                Description = description,
+                Responsibilities = responsibilities,
+                Technologies = technologies,
+                Confidence = ConfidenceLevel.High
+            });
+        }
+    }
+
+    private static void ParseEducationSection(List<string> lines, AiAnalysisResult result)
+    {
+        var eduBlocks = new List<List<string>>();
+        List<string>? currentBlock = null;
+
+        foreach (var line in lines)
+        {
+            var isNewEntry = line.Contains('|') ||
+                             line.StartsWith("Bachelor", StringComparison.OrdinalIgnoreCase) ||
+                             line.StartsWith("Master", StringComparison.OrdinalIgnoreCase) ||
+                             line.StartsWith("Diploma", StringComparison.OrdinalIgnoreCase) ||
+                             line.StartsWith("B.E", StringComparison.OrdinalIgnoreCase) ||
+                             line.StartsWith("B.Tech", StringComparison.OrdinalIgnoreCase);
+
+            if (isNewEntry)
+            {
+                if (currentBlock != null && currentBlock.Count > 0)
+                {
+                    eduBlocks.Add(currentBlock);
+                }
+                currentBlock = [line];
+            }
+            else
+            {
+                currentBlock ??= [];
+                currentBlock.Add(line);
+            }
+        }
+
+        if (currentBlock != null && currentBlock.Count > 0)
+        {
+            eduBlocks.Add(currentBlock);
+        }
+
+        var dateRegex = new Regex(@"(\d{4}[-/\.]\d{2}|\d{4})\s*[-–—]\s*(\d{4}[-/\.]\d{2}|\d{4}|Present)", RegexOptions.IgnoreCase);
+
+        foreach (var block in eduBlocks)
+        {
+            var firstLine = block[0];
+            string degree = "Degree";
+            string institution = "University";
+            string? startDate = null;
+            string? endDate = null;
+            string? grade = null;
+            string? fieldOfStudy = null;
+
+            if (firstLine.Contains('|'))
+            {
+                var parts = firstLine.Split('|', 2);
+                degree = parts[0].Trim();
+                institution = parts[1].Trim();
+            }
+            else
+            {
+                degree = firstLine;
+            }
+
+            foreach (var extraLine in block.Skip(1))
+            {
+                var trimmed = extraLine.Trim();
+                var dMatch = dateRegex.Match(trimmed);
+                if (dMatch.Success)
+                {
+                    startDate = dMatch.Groups[1].Value;
+                    endDate = dMatch.Groups[2].Value;
+                }
+                else if (trimmed.StartsWith("GPA", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("Grade", StringComparison.OrdinalIgnoreCase))
+                {
+                    grade = trimmed;
+                }
+                else if (institution == "University" && trimmed.Length < 70)
+                {
+                    institution = trimmed;
+                }
+                else if (trimmed.Length < 50 && !trimmed.Contains(','))
+                {
+                    institution += ", " + trimmed;
+                }
+            }
+
+            if (degree.Contains(" in "))
+            {
+                var dParts = degree.Split(" in ", 2, StringSplitOptions.RemoveEmptyEntries);
+                degree = dParts[0].Trim();
+                fieldOfStudy = dParts[1].Trim();
+            }
+
+            result.Education.Add(new ExtractedEducationItem
+            {
+                Degree = degree,
+                Institution = institution,
+                FieldOfStudy = fieldOfStudy,
+                StartDate = startDate,
+                EndDate = endDate,
+                Grade = grade,
+                Confidence = ConfidenceLevel.High
+            });
+        }
+    }
+
+    private static void ParseProjectsSection(List<string> lines, AiAnalysisResult result)
+    {
+        if (lines.Count == 0) return;
+
+        var projBlocks = new List<List<string>>();
+        List<string>? currentBlock = null;
+
+        foreach (var line in lines)
+        {
+            if (line.Contains("github.com") || (line.Contains('(') && line.Contains(')')))
+            {
+                if (currentBlock != null && currentBlock.Count > 0)
+                {
+                    projBlocks.Add(currentBlock);
+                }
+                currentBlock = [line];
+            }
+            else
+            {
+                currentBlock ??= [];
+                currentBlock.Add(line);
+            }
+        }
+
+        if (currentBlock != null && currentBlock.Count > 0)
+        {
+            projBlocks.Add(currentBlock);
+        }
+
+        var githubRegex = new Regex(@"(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_\-\/]+", RegexOptions.IgnoreCase);
+
+        foreach (var block in projBlocks)
+        {
+            var header = block[0];
+            string name = header;
+            string? githubUrl = null;
+            var tech = new List<string>();
+
+            var ghMatch = githubRegex.Match(header);
+            if (ghMatch.Success)
+            {
+                githubUrl = ghMatch.Value.StartsWith("http") ? ghMatch.Value : "https://" + ghMatch.Value;
+                header = header.Replace(ghMatch.Value, "").Trim();
+            }
+
+            var techMatch = Regex.Match(header, @"\((.*?)\)");
+            if (techMatch.Success)
+            {
+                tech = techMatch.Groups[1].Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(t => t.Trim())
+                                       .ToList();
+                header = header.Replace(techMatch.Value, "").Trim();
+            }
+
+            name = header.Trim(' ', ':', '-');
+            var desc = string.Join(" ", block.Skip(1).Select(b => b.TrimStart('•', '-', ' ').Trim()));
+
+            result.Projects.Add(new ExtractedProjectItem
+            {
+                Name = string.IsNullOrWhiteSpace(name) ? "Technical Project" : name,
+                Description = string.IsNullOrWhiteSpace(desc) ? $"Engineered {name} with modern architecture." : desc,
+                Technologies = tech,
+                GithubUrl = githubUrl,
+                Confidence = ConfidenceLevel.High
+            });
+        }
+    }
+
+    private static void ParseCertificationsSection(List<string> lines, AiAnalysisResult result)
+    {
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length < 5) continue;
+
+            string name = trimmed;
+            string issuer = "Certification Authority";
+            string? issueDate = null;
+
+            var dateMatch = Regex.Match(trimmed, @"\b(20\d{2}[-/\.]\d{2}|20\d{2})\b");
+            if (dateMatch.Success)
+            {
+                issueDate = dateMatch.Value;
+                trimmed = trimmed.Replace(dateMatch.Value, "").Trim();
+            }
+
+            if (trimmed.Contains('—') || trimmed.Contains('-'))
+            {
+                var sep = trimmed.Contains('—') ? '—' : '-';
+                var parts = trimmed.Split(sep, 2);
+                name = parts[0].Trim();
+                issuer = parts[1].Trim();
+            }
+            else
+            {
+                name = trimmed;
+            }
+
+            result.Certifications.Add(new ExtractedCertificationItem
+            {
+                Name = name,
+                Issuer = issuer,
+                IssueDate = issueDate,
+                Confidence = ConfidenceLevel.High
+            });
+        }
+    }
+
+    private static void ParseExplicitSkillsSection(List<string> lines, AiAnalysisResult result)
+    {
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.Contains(':')) continue;
+
+            var colonIdx = trimmed.IndexOf(':');
+            var catName = trimmed[..colonIdx].Trim();
+            var skillsPart = trimmed[(colonIdx + 1)..].Trim();
+
+            string category = catName switch
+            {
+                var c when c.Contains("Language", StringComparison.OrdinalIgnoreCase) => "Backend",
+                var c when c.Contains("Framework", StringComparison.OrdinalIgnoreCase) => "Frontend",
+                var c when c.Contains("Database", StringComparison.OrdinalIgnoreCase) => "Database",
+                var c when c.Contains("DevOps", StringComparison.OrdinalIgnoreCase) || c.Contains("CI/CD", StringComparison.OrdinalIgnoreCase) => "DevOps",
+                var c when c.Contains("Tool", StringComparison.OrdinalIgnoreCase) => "Tools",
+                var c when c.Contains("Security", StringComparison.OrdinalIgnoreCase) => "Security",
+                var c when c.Contains("Cloud", StringComparison.OrdinalIgnoreCase) => "Cloud",
+                _ => "Other"
+            };
+
+            var skillNames = skillsPart.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(s => s.Trim())
+                                       .Where(s => !string.IsNullOrWhiteSpace(s));
+
+            foreach (var s in skillNames)
+            {
+                if (!result.Skills.Any(existing => existing.Name.Equals(s, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.Skills.Add(new ExtractedSkillItem
+                    {
+                        Name = s,
+                        Category = category,
+                        Level = "Advanced",
+                        Confidence = ConfidenceLevel.High
+                    });
+                }
+            }
         }
     }
 

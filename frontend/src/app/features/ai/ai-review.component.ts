@@ -4,7 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { AiApiService } from '../../core/services/ai-api.service';
 import { PortfolioStateService } from '../../core/services/portfolio-state.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { AiAnalysisResult, ExtractedExperienceItem, ExtractedProjectItem, ExtractedSkillItem } from '../../core/models/ai.model';
+import {
+  AiAnalysisResult,
+  ExtractedCertificationItem,
+  ExtractedEducationItem,
+  ExtractedExperienceItem,
+  ExtractedProjectItem,
+  ExtractedSkillItem
+} from '../../core/models/ai.model';
 import { IconComponent } from '../../shared/components/icon.component';
 
 @Component({
@@ -205,6 +212,13 @@ import { IconComponent } from '../../shared/components/icon.component';
                     <span class="badge" [class]="getConfidenceBadge(proj.confidence)">{{ proj.confidence }} confidence</span>
                   </div>
                   <p class="item-desc">{{ proj.description }}</p>
+                  @if (proj.technologies && proj.technologies.length > 0) {
+                    <div class="tech-tags">
+                      @for (t of proj.technologies; track t) {
+                        <span class="tag">{{ t }}</span>
+                      }
+                    </div>
+                  }
                 </div>
 
                 <div class="item-btn-col">
@@ -219,6 +233,98 @@ import { IconComponent } from '../../shared/components/icon.component';
             }
           </div>
         </div>
+
+        <!-- Education Section -->
+        @if (analysis()?.education?.length) {
+          <div class="review-card card">
+            <div class="card-header">
+              <div class="header-title">
+                <app-icon name="graduation-cap" [size]="18" />
+                <h3>Education & Credentials ({{ analysis()?.education?.length }})</h3>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-sm btn-primary" (click)="acceptAllEducation()">Accept All Education</button>
+              </div>
+            </div>
+
+            <div class="items-review-list">
+              @for (edu of analysis()?.education; track edu.id) {
+                <div class="item-review-row" [class.accepted]="acceptedEducationIds().has(edu.id)">
+                  <div class="item-info">
+                    <div class="item-heading">
+                      <h4>{{ edu.degree }}</h4>
+                      <span class="company-tag">{{ edu.institution }}</span>
+                      <span class="badge" [class]="getConfidenceBadge(edu.confidence)">{{ edu.confidence }} confidence</span>
+                    </div>
+                    <div class="item-meta">
+                      @if (edu.startDate || edu.endDate) {
+                        <span>{{ edu.startDate }} — {{ edu.endDate }}</span>
+                      }
+                      @if (edu.grade) {
+                        <span>• {{ edu.grade }}</span>
+                      }
+                      @if (edu.fieldOfStudy) {
+                        <span>• {{ edu.fieldOfStudy }}</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="item-btn-col">
+                    @if (acceptedEducationIds().has(edu.id)) {
+                      <span class="badge badge-success">✓ Accepted</span>
+                    } @else {
+                      <button class="btn btn-sm btn-primary" (click)="acceptEducation(edu)">Accept</button>
+                      <button class="btn btn-sm btn-ghost" (click)="ignoreEducation(edu.id)">Ignore</button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Certifications Section -->
+        @if (analysis()?.certifications?.length) {
+          <div class="review-card card">
+            <div class="card-header">
+              <div class="header-title">
+                <app-icon name="award" [size]="18" />
+                <h3>Certifications ({{ analysis()?.certifications?.length }})</h3>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-sm btn-primary" (click)="acceptAllCertifications()">Accept All Certifications</button>
+              </div>
+            </div>
+
+            <div class="items-review-list">
+              @for (cert of analysis()?.certifications; track cert.id) {
+                <div class="item-review-row" [class.accepted]="acceptedCertificationIds().has(cert.id)">
+                  <div class="item-info">
+                    <div class="item-heading">
+                      <h4>{{ cert.name }}</h4>
+                      <span class="company-tag">{{ cert.issuer }}</span>
+                      <span class="badge" [class]="getConfidenceBadge(cert.confidence)">{{ cert.confidence }} confidence</span>
+                    </div>
+                    @if (cert.issueDate) {
+                      <div class="item-meta">
+                        <span>Issued: {{ cert.issueDate }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="item-btn-col">
+                    @if (acceptedCertificationIds().has(cert.id)) {
+                      <span class="badge badge-success">✓ Accepted</span>
+                    } @else {
+                      <button class="btn btn-sm btn-primary" (click)="acceptCertification(cert)">Accept</button>
+                      <button class="btn btn-sm btn-ghost" (click)="ignoreCertification(cert.id)">Ignore</button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
       }
     </div>
   `,
@@ -450,6 +556,8 @@ export class AiReviewComponent implements OnInit {
   acceptedSkillIds = signal<Set<string>>(new Set());
   acceptedExperienceIds = signal<Set<string>>(new Set());
   acceptedProjectIds = signal<Set<string>>(new Set());
+  acceptedEducationIds = signal<Set<string>>(new Set());
+  acceptedCertificationIds = signal<Set<string>>(new Set());
 
   ngOnInit(): void {
     this.loadAnalysis();
@@ -582,11 +690,68 @@ export class AiReviewComponent implements OnInit {
     this.acceptedProjectIds.update(set => new Set([...set, id]));
   }
 
+  acceptEducation(edu: ExtractedEducationItem): void {
+    this.state.addEducation({
+      id: Math.random().toString(36).substring(2, 9),
+      institution: edu.institution,
+      degree: edu.degree,
+      fieldOfStudy: edu.fieldOfStudy || '',
+      startDate: edu.startDate || '',
+      endDate: edu.endDate || '',
+      grade: edu.grade || '',
+      activities: edu.activities || ''
+    });
+    this.acceptedEducationIds.update(set => new Set([...set, edu.id]));
+    this.notify.success(`Education "${edu.degree}" accepted.`);
+  }
+
+  acceptAllEducation(): void {
+    const list = this.analysis()?.education || [];
+    list.forEach(ed => {
+      if (!this.acceptedEducationIds().has(ed.id)) {
+        this.acceptEducation(ed);
+      }
+    });
+  }
+
+  ignoreEducation(id: string): void {
+    this.acceptedEducationIds.update(set => new Set([...set, id]));
+  }
+
+  acceptCertification(cert: ExtractedCertificationItem): void {
+    this.state.addCertification({
+      id: Math.random().toString(36).substring(2, 9),
+      name: cert.name,
+      issuer: cert.issuer,
+      issueDate: cert.issueDate || '',
+      expiryDate: cert.expiryDate || '',
+      credentialUrl: cert.credentialUrl || '',
+      credentialId: cert.credentialId || ''
+    });
+    this.acceptedCertificationIds.update(set => new Set([...set, cert.id]));
+    this.notify.success(`Certification "${cert.name}" accepted.`);
+  }
+
+  acceptAllCertifications(): void {
+    const list = this.analysis()?.certifications || [];
+    list.forEach(c => {
+      if (!this.acceptedCertificationIds().has(c.id)) {
+        this.acceptCertification(c);
+      }
+    });
+  }
+
+  ignoreCertification(id: string): void {
+    this.acceptedCertificationIds.update(set => new Set([...set, id]));
+  }
+
   acceptAll(): void {
     this.acceptProfile();
     this.acceptAllSkills();
     this.acceptAllExperience();
     this.acceptAllProjects();
+    this.acceptAllEducation();
+    this.acceptAllCertifications();
 
     const summaryContent = this.analysis()?.summary?.content?.value;
     if (summaryContent) {

@@ -73,4 +73,60 @@ public class ResumeAIServiceTests
         Assert.Equal("john@example.com", result.Profile.Email.Value);
         Assert.Contains(result.Skills, s => s.Name == "Docker");
     }
+
+    [Fact]
+    public async Task AnalyzeActualUploadedResume_PdfFile()
+    {
+        var resumePath = Path.Combine(AppContext.BaseDirectory, "../../../../../backend/PortfolioAI.Api/storage/users/10823492384923/resume/resume.pdf");
+        if (!File.Exists(resumePath))
+        {
+            resumePath = @"E:\Projects\Portfolio_Sudhir\backend\PortfolioAI.Api\storage\users\10823492384923\resume\resume.pdf";
+        }
+
+        if (File.Exists(resumePath))
+        {
+            using var stream = File.OpenRead(resumePath);
+            var extractor = new DocumentTextExtractor(NullLogger<DocumentTextExtractor>.Instance);
+            var text = extractor.ExtractText(stream, ".pdf");
+
+            Assert.False(string.IsNullOrWhiteSpace(text), "Extracted text should not be empty");
+
+            File.WriteAllText(@"C:\Users\HP\.gemini\antigravity-ide\brain\900ec321-5f90-418e-b4b4-5472c92346da\scratch\extracted_raw.txt", text);
+
+            var result = await _aiService.AnalyzeResumeTextAsync(text);
+            Assert.NotNull(result);
+            Assert.Equal("Sudhir Raj", result.Profile.FullName.Value);
+            Assert.Equal("Software Developer", result.Profile.ProfessionalTitle.Value);
+            Assert.Equal("itssudhirraj@gmail.com", result.Profile.Email.Value);
+            Assert.NotNull(result.Profile.Phone.Value);
+            Assert.Contains("7903024321", result.Profile.Phone.Value);
+            Assert.NotNull(result.Profile.Location.Value);
+            Assert.Contains("Mumbai", result.Profile.Location.Value);
+            Assert.NotNull(result.Profile.Linkedin.Value);
+            Assert.Contains("linkedin.com/in/sudhir-raj", result.Profile.Linkedin.Value);
+            Assert.NotNull(result.Profile.Github.Value);
+            Assert.Contains("github.com/imsudhirraj", result.Profile.Github.Value);
+
+            Assert.False(string.IsNullOrWhiteSpace(result.Summary.Content.Value));
+            Assert.Contains("enterprise web applications", result.Summary.Content.Value);
+
+            Assert.True(result.Experience.Count >= 2, $"Expected at least 2 experiences, found {result.Experience.Count}");
+            Assert.Contains(result.Experience, e => e.Company.Contains("Wipro") && e.JobTitle.Contains("Developer"));
+            Assert.Contains(result.Experience, e => e.Company.Contains("R24 Bharat") || e.Company.Contains("Bharat"));
+
+            Assert.True(result.Education.Count >= 2, $"Expected at least 2 education entries, found {result.Education.Count}");
+            Assert.Contains(result.Education, ed => ed.Degree.Contains("Bachelor") || ed.Institution.Contains("Visvesvaraya"));
+
+            Assert.True(result.Projects.Count >= 1, $"Expected at least 1 project, found {result.Projects.Count}");
+            Assert.Contains(result.Projects, p => p.Name.Contains("PG Management") || (p.GithubUrl != null && p.GithubUrl.Contains("PG_Management_App")));
+
+            Assert.True(result.Certifications.Count >= 1, $"Expected at least 1 cert, found {result.Certifications.Count}");
+            Assert.Contains(result.Certifications, c => c.Name.Contains("JUNIOR SOFTWARE DEVELOPER") || c.Issuer.Contains("NASSCOM"));
+
+            Assert.True(result.Skills.Count >= 8, $"Expected at least 8 skills, found {result.Skills.Count}");
+            Assert.Contains(result.Skills, s => s.Name == "C#");
+            Assert.Contains(result.Skills, s => s.Name == "Angular");
+            Assert.Contains(result.Skills, s => s.Name == "ASP.NET Core");
+        }
+    }
 }

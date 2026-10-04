@@ -53,21 +53,21 @@ export interface EducationItem {
   id: string;
   institution: string;
   degree: string;
-  fieldOfStudy: string;
-  startDate: string;
-  endDate: string;
-  grade: string;
-  activities: string;
+  fieldOfStudy?: string;
+  startDate?: string;
+  endDate?: string;
+  grade?: string;
+  activities?: string;
 }
 
 export interface CertificationItem {
   id: string;
   name: string;
   issuer: string;
-  issueDate: string;
-  expiryDate: string;
-  credentialUrl: string;
-  credentialId: string;
+  issueDate?: string;
+  expiryDate?: string;
+  credentialUrl?: string;
+  credentialId?: string;
 }
 
 export interface SocialLink {

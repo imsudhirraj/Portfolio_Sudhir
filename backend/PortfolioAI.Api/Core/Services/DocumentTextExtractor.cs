@@ -44,11 +44,58 @@ public class DocumentTextExtractor(ILogger<DocumentTextExtractor> logger)
 
         foreach (var page in pdfDocument.GetPages())
         {
-            var text = page.Text;
-            if (!string.IsNullOrWhiteSpace(text))
+            var words = page.GetWords().ToList();
+            if (words.Count == 0)
             {
-                sb.AppendLine(text);
+                var fallback = page.Text;
+                if (!string.IsNullOrWhiteSpace(fallback))
+                {
+                    sb.AppendLine(fallback);
+                }
+                continue;
             }
+
+            // Group words into lines based on vertical proximity (Y descending)
+            var sortedWords = words.OrderByDescending(w => w.BoundingBox.Bottom).ThenBy(w => w.BoundingBox.Left).ToList();
+            var lineWords = new List<UglyToad.PdfPig.Content.Word>();
+            double? currentLineY = null;
+            const double yTolerance = 4.0;
+
+            foreach (var word in sortedWords)
+            {
+                if (currentLineY == null)
+                {
+                    currentLineY = word.BoundingBox.Bottom;
+                    lineWords.Add(word);
+                }
+                else if (Math.Abs(word.BoundingBox.Bottom - currentLineY.Value) <= yTolerance)
+                {
+                    lineWords.Add(word);
+                }
+                else
+                {
+                    var lineText = string.Join(" ", lineWords.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text));
+                    if (!string.IsNullOrWhiteSpace(lineText))
+                    {
+                        sb.AppendLine(lineText);
+                    }
+
+                    lineWords.Clear();
+                    lineWords.Add(word);
+                    currentLineY = word.BoundingBox.Bottom;
+                }
+            }
+
+            if (lineWords.Count > 0)
+            {
+                var lineText = string.Join(" ", lineWords.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text));
+                if (!string.IsNullOrWhiteSpace(lineText))
+                {
+                    sb.AppendLine(lineText);
+                }
+            }
+
+            sb.AppendLine();
         }
 
         return sb.ToString().Trim();
