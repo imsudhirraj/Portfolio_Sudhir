@@ -891,11 +891,13 @@ export class ResumeUploadComponent implements OnInit {
         }
       });
     } catch (ocrErr: any) {
+      console.error('OCR Extraction Exception:', ocrErr);
       this.isOcrRunning.set(false);
       this.isAnalyzing.set(false);
       const errMsg = ocrErr?.message || 'OCR extraction could not be completed.';
       this.extractionErrorMessage.set(errMsg + ' You can use the Paste Resume Text tab to enter your details.');
-      this.notify.error('OCR extraction failed. You can paste your resume details directly.');
+      this.notify.warning(`OCR note: ${errMsg.slice(0, 75)}. Switching to text tab...`);
+      this.switchToPaste();
     }
   }
 

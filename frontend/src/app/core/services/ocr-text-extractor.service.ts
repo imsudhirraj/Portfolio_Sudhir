@@ -10,7 +10,8 @@ export class OcrTextExtractorService {
     const pdfjsLib = await import('pdfjs-dist');
     if (!this.pdfWorkerInitialized && typeof window !== 'undefined') {
       try {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        const origin = window.location?.origin || '';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `${origin}/pdf.worker.min.mjs`;
         this.pdfWorkerInitialized = true;
       } catch (err) {
         console.warn('Could not set custom workerSrc for pdfjs-dist', err);
@@ -28,19 +29,52 @@ export class OcrTextExtractorService {
       }
     };
 
+    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
+
+    // Strategy 1: Local self-hosted worker (fastest, 0 network latency, same-origin, no CORS)
     try {
+      console.log('Initializing Tesseract worker (local hosting mode)...');
       const worker = await createWorker('eng', 1, {
-        workerPath: '/tesseract/worker.min.js',
-        corePath: '/tesseract/tesseract-core-simd.wasm.js',
-        langPath: '/tessdata',
+        workerPath: `${origin}/tesseract/worker.min.js`,
+        corePath: `${origin}/tesseract`,
+        langPath: `${origin}/tessdata`,
+        workerBlobURL: false,
+        gzip: true,
         logger: loggerCallback
       });
+      console.log('Tesseract worker initialized successfully via local assets.');
       return worker;
-    } catch {
-      // Fallback to standard tesseract worker if local path has hosting constraints
-      return await createWorker('eng', 1, {
+    } catch (localErr) {
+      console.warn('Local Tesseract worker initialization failed, trying cloud CDN fallback:', localErr);
+    }
+
+    // Strategy 2: Official CDN fast fallback (1.5MB traineddata instead of 15MB)
+    try {
+      console.log('Initializing Tesseract worker (cloud CDN fast fallback)...');
+      const worker = await createWorker('eng', 1, {
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@v7.0.0/dist/worker.min.js',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v7.0.0',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast',
+        gzip: true,
         logger: loggerCallback
       });
+      console.log('Tesseract worker initialized successfully via cloud CDN fast mode.');
+      return worker;
+    } catch (cdnFastErr) {
+      console.warn('Cloud CDN fast mode failed, trying standard default CDN:', cdnFastErr);
+    }
+
+    // Strategy 3: Standard default CDN mode
+    try {
+      console.log('Initializing Tesseract worker (default mode)...');
+      const worker = await createWorker('eng', 1, {
+        logger: loggerCallback
+      });
+      console.log('Tesseract worker initialized successfully via default CDN mode.');
+      return worker;
+    } catch (finalErr) {
+      console.error('All Tesseract worker initialization strategies failed:', finalErr);
+      throw new Error(`OCR Engine could not be started: ${(finalErr as any)?.message || finalErr}`);
     }
   }
 
@@ -182,14 +216,22 @@ export class OcrTextExtractorService {
         // 2x scale for sharp character recognition
         const viewport = page.getViewport({ scale: 2.0 });
         const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
         const ctx = canvas.getContext('2d');
 
         if (ctx) {
-          await page.render({ canvasContext: ctx, canvas, viewport } as any).promise;
-          const ret = await worker.recognize(canvas);
-          if (ret.data?.text) {
+          const renderTask = page.render({
+            canvasContext: ctx,
+            canvas: canvas,
+            viewport: viewport
+          } as any);
+          await renderTask.promise;
+
+          // Convert canvas to base64 PNG data URL - avoids asynchronous canvas.toBlob() quirks across browsers
+          const dataUrl = canvas.toDataURL('image/png');
+          const ret = await worker.recognize(dataUrl);
+          if (ret?.data?.text) {
             fullOcrText += ret.data.text + '\n\n';
           }
         }
@@ -234,7 +276,7 @@ export class OcrTextExtractorService {
     const worker = await this.initTesseractWorker(onProgress);
     try {
       const ret = await worker.recognize(file);
-      return ret.data?.text?.trim() || '';
+      return ret?.data?.text?.trim() || '';
     } finally {
       await worker.terminate();
     }
