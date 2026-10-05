@@ -25,8 +25,16 @@ export class ResumeApiService {
     return this.http.post<ApiResponse<any>>(`${this.baseUrl}/upload`, formData);
   }
 
-  analyze(): Observable<ApiResponse<AiAnalysisResult>> {
-    return this.http.post<ApiResponse<AiAnalysisResult>>(`${this.baseUrl}/analyze`, {});
+  analyze(autoBuild: boolean = false): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/analyze?autoBuild=${autoBuild}`, {});
+  }
+
+  analyzeAndBuild(): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/analyze-and-build`, {});
+  }
+
+  analyzeText(text: string, autoBuild: boolean = false): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/analyze-text`, { text, autoBuild });
   }
 
   getInfo(): Observable<ApiResponse<StoredResumeInfo>> {
@@ -35,6 +43,10 @@ export class ResumeApiService {
 
   downloadUrl(): string {
     return `${this.baseUrl}/download`;
+  }
+
+  downloadBlob(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/download`, { responseType: 'blob' });
   }
 
   delete(): Observable<ApiResponse<any>> {

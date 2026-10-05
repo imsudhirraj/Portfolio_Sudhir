@@ -41,8 +41,13 @@ export class AuthService {
     return null;
   }
 
-  loginWithGoogle(idToken: string): Observable<ApiResponse<AuthResponse>> {
-    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/google`, { idToken }).pipe(
+  getAuthConfig(): Observable<ApiResponse<{ googleClientId: string | null; isConfigured: boolean }>> {
+    return this.http.get<ApiResponse<{ googleClientId: string | null; isConfigured: boolean }>>(`${this.apiUrl}/config`);
+  }
+
+  loginWithGoogle(payload: string | { idToken?: string; accessToken?: string }): Observable<ApiResponse<AuthResponse>> {
+    const body = typeof payload === 'string' ? { idToken: payload } : payload;
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/google`, body).pipe(
       tap(res => {
         if (res.success && res.data) {
           this.setSession(res.data);
@@ -51,8 +56,8 @@ export class AuthService {
     );
   }
 
-  loginWithDevAccount(userId?: string, email?: string, name?: string): Observable<ApiResponse<AuthResponse>> {
-    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/dev-login`, { userId, email, name }).pipe(
+  loginWithDevAccount(userId?: string, email?: string, name?: string, securityPin?: string): Observable<ApiResponse<AuthResponse>> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/dev-login`, { userId, email, name, securityPin }).pipe(
       tap(res => {
         if (res.success && res.data) {
           this.setSession(res.data);

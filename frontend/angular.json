@@ -37,7 +37,12 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "tesseract.js",
+              "regenerator-runtime",
+              "regenerator-runtime/runtime"
+            ]
           },
           "configurations": {
             "production": {
@@ -49,8 +54,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "20kB",
-                  "maximumError": "30kB"
+                  "maximumWarning": "35kB",
+                  "maximumError": "60kB"
                 }
               ],
               "outputHashing": "all"

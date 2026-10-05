@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -119,6 +119,12 @@ var app = builder.Build();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+app.UseHttpsRedirection();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -138,4 +144,40 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 
+// Ensure storage initialized and Sudhir Raj master portfolio seeded if missing
+using (var scope = app.Services.CreateScope())
+{
+    var storage = scope.ServiceProvider.GetRequiredService<IFileStorageService>();
+    var portfolioRepo = scope.ServiceProvider.GetRequiredService<IPortfolioRepository>();
+    var slugRepo = scope.ServiceProvider.GetRequiredService<IPublicSlugRepository>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        const string sudhirUserId = "10823492384923";
+        storage.GetUserDirectory(sudhirUserId);
+        var existing = await portfolioRepo.GetPortfolioAsync(sudhirUserId);
+        if (existing == null)
+        {
+            logger.LogInformation("Seeding master portfolio for Sudhir Raj ({UserId})", sudhirUserId);
+            var portfolio = await portfolioRepo.GetOrCreatePortfolioAsync(sudhirUserId, "Sudhir Raj", "imsudhirraj@gmail.com");
+            portfolio.Publication.IsPublished = true;
+            portfolio.Publication.Slug = "sudhir-raj";
+            portfolio.Profile.FullName = "Sudhir Raj";
+            portfolio.Profile.Email = "imsudhirraj@gmail.com";
+            await portfolioRepo.SavePortfolioAsync(sudhirUserId, portfolio);
+            await slugRepo.RegisterSlugAsync("sudhir-raj", sudhirUserId);
+        }
+        else if (existing.Publication.IsPublished && !string.IsNullOrWhiteSpace(existing.Publication.Slug))
+        {
+            await slugRepo.RegisterSlugAsync(existing.Publication.Slug, sudhirUserId);
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Non-critical error during startup storage initialization.");
+    }
+}
+
 app.Run();
+

@@ -92,4 +92,41 @@ public class JwtTokenService(IConfiguration configuration, IHttpClientFactory ht
             return null;
         }
     }
+
+    public async Task<GoogleUserInfo?> VerifyGoogleAccessTokenAsync(string accessToken, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+            var response = await client.GetAsync("https://www.googleapis.com/oauth2/v3/userinfo", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Google userinfo returned status {Status}", response.StatusCode);
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var sub = root.GetProperty("sub").GetString();
+            var email = root.GetProperty("email").GetString();
+            var name = root.TryGetProperty("name", out var n) ? n.GetString() : email;
+            var picture = root.TryGetProperty("picture", out var p) ? p.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(sub) || string.IsNullOrWhiteSpace(email))
+            {
+                return null;
+            }
+
+            return new GoogleUserInfo(sub, email, name ?? email, picture);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error validating Google Access Token");
+            return null;
+        }
+    }
 }

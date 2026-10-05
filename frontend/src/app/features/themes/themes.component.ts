@@ -21,7 +21,7 @@ import { PortfolioStateService } from '../../core/services/portfolio-state.servi
           (click)="setThemeName('developer')"
         >
           <div class="theme-preview-box dev-preview">
-            <span class="preview-tag">// Engineering</span>
+            <span class="preview-tag">Engineering</span>
             <div class="preview-mini-title">Developer Theme</div>
             <div class="code-lines">
               <span class="line"></span>

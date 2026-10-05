@@ -746,22 +746,31 @@ export class AiReviewComponent implements OnInit {
   }
 
   acceptAll(): void {
-    this.acceptProfile();
-    this.acceptAllSkills();
-    this.acceptAllExperience();
-    this.acceptAllProjects();
-    this.acceptAllEducation();
-    this.acceptAllCertifications();
+    const analysis = this.analysis();
+    if (!analysis) return;
 
-    const summaryContent = this.analysis()?.summary?.content?.value;
-    if (summaryContent) {
-      this.state.updatePortfolio(port => {
-        port.summary.content = summaryContent;
-        return port;
-      });
-    }
-
-    this.notify.success('All AI suggestions successfully merged into your portfolio!');
-    this.router.navigate(['/dashboard/editor/personal-info']);
+    this.isLoading.set(true);
+    this.aiApi.applySuggestions({
+      applyProfile: true,
+      applySummary: true,
+      selectedSkillIds: analysis.skills.map(s => s.id),
+      selectedExperienceIds: analysis.experience.map(e => e.id),
+      selectedProjectIds: analysis.projects.map(p => p.id),
+      selectedEducationIds: analysis.education.map(ed => ed.id),
+      selectedCertificationIds: analysis.certifications.map(c => c.id)
+    }).subscribe({
+      next: res => {
+        this.isLoading.set(false);
+        if (res.success && res.data) {
+          this.state.portfolio.set(res.data);
+          this.notify.success('All AI suggestions successfully applied to your portfolio!');
+          this.router.navigate(['/dashboard/overview']);
+        }
+      },
+      error: err => {
+        this.isLoading.set(false);
+        this.notify.error(err.error?.message || 'Failed to apply AI suggestions.');
+      }
+    });
   }
 }

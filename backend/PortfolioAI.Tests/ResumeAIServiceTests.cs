@@ -129,4 +129,59 @@ public class ResumeAIServiceTests
             Assert.Contains(result.Skills, s => s.Name == "ASP.NET Core");
         }
     }
+
+    [Fact]
+    public async Task ApplyAnalysisToPortfolio_ReplacesDummyStarterDataAndPopulatesPortfolio()
+    {
+        var sampleResume = """
+        Sudhir Raj
+        Software Developer
+        itssudhirraj@gmail.com | +91 7903024321
+        https://linkedin.com/in/sudhir-raj | https://github.com/imsudhirraj
+
+        Summary
+        Experienced software developer engineering enterprise web apps with C# and Angular.
+
+        Skills
+        C#, ASP.NET Core, Angular, TypeScript, Oracle Database, SQL Server
+
+        Experience
+        Software Developer
+        Wipro Ltd
+        Developed banking transaction workflows with ASP.NET Core.
+
+        Education
+        Bachelor of Engineering
+        Visvesvaraya Technological University
+        """;
+
+        var analysis = await _aiService.AnalyzeResumeTextAsync(sampleResume);
+
+        // Portfolio with starter dummy items
+        var portfolio = new Portfolio
+        {
+            Profile = new Profile { FullName = "Dummy Name", ProfessionalTitle = "Dummy Title" },
+            Summary = new Summary { Content = "Dummy summary" },
+            Skills = [new SkillItem { Name = "TypeScript" }, new SkillItem { Name = "C# / .NET" }, new SkillItem { Name = "Cloud Architecture" }],
+            Experience = [new ExperienceItem { Company = "Tech Innovators Inc.", JobTitle = "Dummy Role" }],
+            Projects = [new ProjectItem { Name = "PortfolioAI Platform" }],
+            Education = [new EducationItem { Institution = "National Institute of Technology" }],
+            Certifications = [new CertificationItem { Name = "AWS Certified Solutions Architect - Associate" }]
+        };
+
+        PortfolioAI.Api.Controllers.ResumeController.ApplyAnalysisToPortfolio(portfolio, analysis);
+
+        Assert.Equal("Sudhir Raj", portfolio.Profile.FullName);
+        Assert.Equal("Software Developer", portfolio.Profile.ProfessionalTitle);
+        Assert.Equal("itssudhirraj@gmail.com", portfolio.Profile.Email);
+        Assert.DoesNotContain(portfolio.Experience, e => e.Company == "Tech Innovators Inc.");
+        Assert.Contains(portfolio.Experience, e => e.Company == "Wipro Ltd");
+        Assert.DoesNotContain(portfolio.Projects, p => p.Name == "PortfolioAI Platform");
+        Assert.DoesNotContain(portfolio.Education, ed => ed.Institution == "National Institute of Technology");
+        Assert.Contains(portfolio.Education, ed => ed.Institution.Contains("Visvesvaraya"));
+        Assert.DoesNotContain(portfolio.Certifications, c => c.Name == "AWS Certified Solutions Architect - Associate");
+        Assert.Contains(portfolio.Skills, s => s.Name == "C#");
+        Assert.Contains(portfolio.Skills, s => s.Name == "Angular");
+    }
 }
+

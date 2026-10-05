@@ -45,6 +45,32 @@ public partial class ResumeAIService : IResumeAIService
         return ParseResumeLocally(sanitizedText);
     }
 
+    public async Task<AiAnalysisResult> AnalyzeDocumentBytesAsync(Stream documentStream, string contentType, CancellationToken cancellationToken = default)
+    {
+        var apiKey = _configuration["AI:ApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey) || apiKey.StartsWith("YOUR_"))
+        {
+            throw new InvalidOperationException("Scanned document OCR requires an active Gemini API key in appsettings.json. Alternatively, please use the 'Paste Resume Text' option to build your portfolio immediately.");
+        }
+
+        using var ms = new MemoryStream();
+        if (documentStream.CanSeek)
+        {
+            documentStream.Seek(0, SeekOrigin.Begin);
+        }
+        await documentStream.CopyToAsync(ms, cancellationToken);
+        var bytes = ms.ToArray();
+
+        var mimeType = contentType.ToLowerInvariant().Contains("pdf") ? "application/pdf" : contentType;
+        var result = await CallGeminiForVisualDocumentAnalysisAsync(bytes, mimeType, apiKey, cancellationToken);
+        if (result != null && result.TotalExtractedItems > 0)
+        {
+            return result;
+        }
+
+        throw new InvalidOperationException("AI Vision was unable to extract legible text from this document. Please use the 'Paste Resume Text' option.");
+    }
+
     public async Task<string> ImproveSummaryAsync(string currentSummary, string tone = "professional", CancellationToken cancellationToken = default)
     {
         var apiKey = _configuration["AI:ApiKey"];
@@ -258,6 +284,149 @@ public partial class ResumeAIService : IResumeAIService
         {
             var err = await response.Content.ReadAsStringAsync(cancellationToken);
             _logger.LogWarning("Gemini API returned error status {Status}: {Error}", response.StatusCode, err);
+            return null;
+        }
+
+        var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var doc = JsonDocument.Parse(jsonResponse);
+        var root = doc.RootElement;
+
+        var textPart = root.GetProperty("candidates")[0]
+                           .GetProperty("content")
+                           .GetProperty("parts")[0]
+                           .GetProperty("text")
+                           .GetString();
+
+        if (string.IsNullOrWhiteSpace(textPart))
+        {
+            return null;
+        }
+
+        var cleanJson = CleanJsonString(textPart);
+        var parsed = JsonSerializer.Deserialize<AiAnalysisResult>(cleanJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return parsed;
+    }
+
+    private async Task<AiAnalysisResult?> CallGeminiForVisualDocumentAnalysisAsync(byte[] documentBytes, string mimeType, string apiKey, CancellationToken cancellationToken)
+    {
+        var model = _configuration["AI:Model"] ?? "gemini-1.5-flash";
+        var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+
+        var systemPrompt = """
+        You are an advanced multimodal structured resume parsing engine.
+        CRITICAL INSTRUCTION:
+        Carefully read the provided document or image. Extract all factual information present in the resume. Never invent data.
+
+        Return a valid, raw JSON object (with NO markdown blocks, NO backticks) matching this exact schema:
+        {
+          "profile": {
+            "fullName": { "value": "string", "confidence": "High" },
+            "professionalTitle": { "value": "string", "confidence": "High" },
+            "email": { "value": "string", "confidence": "High" },
+            "phone": { "value": "string", "confidence": "Medium" },
+            "location": { "value": "string", "confidence": "Medium" },
+            "linkedin": { "value": "string", "confidence": "High" },
+            "github": { "value": "string", "confidence": "High" },
+            "website": { "value": "string", "confidence": "High" }
+          },
+          "summary": {
+            "content": { "value": "string", "confidence": "High" }
+          },
+          "skills": [
+            { "name": "string", "category": "Backend|Frontend|Database|Cloud|DevOps|Tools|Messaging|Security|Other", "level": "Intermediate|Expert", "confidence": "High" }
+          ],
+          "experience": [
+            {
+              "company": "string",
+              "jobTitle": "string",
+              "location": "string",
+              "startDate": "YYYY-MM",
+              "endDate": "YYYY-MM or Present",
+              "isCurrent": boolean,
+              "description": "string",
+              "responsibilities": ["string"],
+              "achievements": ["string"],
+              "technologies": ["string"],
+              "confidence": "High"
+            }
+          ],
+          "projects": [
+            {
+              "name": "string",
+              "description": "string",
+              "role": "string",
+              "technologies": ["string"],
+              "responsibilities": ["string"],
+              "achievements": ["string"],
+              "projectUrl": "string",
+              "githubUrl": "string",
+              "confidence": "Medium"
+            }
+          ],
+          "education": [
+            {
+              "institution": "string",
+              "degree": "string",
+              "fieldOfStudy": "string",
+              "startDate": "YYYY",
+              "endDate": "YYYY",
+              "grade": "string",
+              "activities": "string",
+              "confidence": "High"
+            }
+          ],
+          "certifications": [
+            {
+              "name": "string",
+              "issuer": "string",
+              "issueDate": "YYYY-MM",
+              "expiryDate": "YYYY-MM",
+              "credentialUrl": "string",
+              "credentialId": "string",
+              "confidence": "High"
+            }
+          ]
+        }
+        """;
+
+        var payload = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    parts = new object[]
+                    {
+                        new
+                        {
+                            inline_data = new
+                            {
+                                mime_type = mimeType,
+                                data = Convert.ToBase64String(documentBytes)
+                            }
+                        },
+                        new { text = systemPrompt }
+                    }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.1,
+                responseMimeType = "application/json"
+            }
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning("Gemini API visual document returned error status {Status}: {Error}", response.StatusCode, err);
             return null;
         }
 
@@ -698,9 +867,19 @@ public partial class ResumeAIService : IResumeAIService
                     location = compParts[1].Trim();
                 }
             }
+            else if (cleanHeader.Contains(" at ", StringComparison.OrdinalIgnoreCase))
+            {
+                var parts = Regex.Split(cleanHeader, @"\s+at\s+", RegexOptions.IgnoreCase);
+                title = parts[0].Trim();
+                company = parts[1].Trim();
+            }
             else
             {
                 title = cleanHeader;
+                if (block.Count > 1 && block[1].Length < 60 && !block[1].StartsWith("Technologies", StringComparison.OrdinalIgnoreCase) && !block[1].StartsWith("•") && !block[1].StartsWith("-") && !block[1].StartsWith("*"))
+                {
+                    company = block[1].Trim();
+                }
             }
 
             var responsibilities = new List<string>();

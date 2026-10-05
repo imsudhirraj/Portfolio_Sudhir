@@ -54,22 +54,22 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
 }
 
-# 5. Ensure Storage Directories exist in publish
-Write-Host "`n5. Preparing JSON file storage directories in publish..."
-$storageUsers = Join-Path $publishDir "storage\users"
-$storagePublic = Join-Path $publishDir "storage\public"
-New-Item -ItemType Directory -Force -Path $storageUsers | Out-Null
-New-Item -ItemType Directory -Force -Path $storagePublic | Out-Null
-
-# Keep existing user data if available
-$existingStorage = Join-Path $backendDir "storage"
-if (Test-Path $existingStorage) {
-    Copy-Item -Path "$existingStorage\*" -Destination (Join-Path $publishDir "storage") -Recurse -Force -ErrorAction SilentlyContinue
+# 5. Do NOT package storage directory to guarantee 100% server data persistence across deployments!
+Write-Host "`n5. Excluding storage directory from package to protect server data..."
+$publishStorage = Join-Path $publishDir "storage"
+if (Test-Path $publishStorage) {
+    Remove-Item -Recurse -Force $publishStorage
 }
+Write-Host "   Server storage directory will NOT be overwritten on deployment."
 
 # 6. Create deployment ZIP
 Write-Host "`n6. Creating deployment package: PortfolioAI-MonsterASP.zip..."
-Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath -Force
+Add-Type -AssemblyName "System.IO.Compression.FileSystem"
+Start-Sleep -Seconds 1
+if (Test-Path $zipPath) {
+    Remove-Item -Force $zipPath
+}
+[System.IO.Compression.ZipFile]::CreateFromDirectory($publishDir, $zipPath)
 
 $zipFileInfo = Get-Item $zipPath
 $zipSizeMb = [math]::Round($zipFileInfo.Length / 1MB, 2)

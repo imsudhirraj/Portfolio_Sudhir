@@ -19,9 +19,9 @@ public class FileResumeStorage(IFileStorageService fileStorage, ILogger<FileResu
 
         // Validate extension
         var ext = Path.GetExtension(originalFileName).ToLowerInvariant();
-        if (ext != ".pdf" && ext != ".docx")
+        if (ext != ".pdf" && ext != ".docx" && ext != ".txt")
         {
-            throw new ArgumentException("Only .pdf and .docx file formats are permitted.");
+            throw new ArgumentException("Only .pdf, .docx, and .txt file formats are permitted.");
         }
 
         // Validate magic bytes
@@ -50,6 +50,15 @@ public class FileResumeStorage(IFileStorageService fileStorage, ILogger<FileResu
                 throw new ArgumentException("Invalid file format. File does not contain valid DOCX zip headers.");
             }
         }
+        else if (ext == ".txt")
+        {
+            // Verify TXT is not an executable (MZ = 0x4D, 0x5A or ELF = 0x7F, 0x45, 0x4C, 0x46)
+            if ((headerBytes[0] == 0x4D && headerBytes[1] == 0x5A) ||
+                (headerBytes[0] == 0x7F && headerBytes[1] == 0x45 && headerBytes[2] == 0x4C && headerBytes[3] == 0x46))
+            {
+                throw new ArgumentException("Invalid file format. Executable binary files cannot be uploaded as text resumes.");
+            }
+        }
 
         // Clean any existing resume files in user's resume directory
         await DeleteResumeAsync(userId);
@@ -73,7 +82,7 @@ public class FileResumeStorage(IFileStorageService fileStorage, ILogger<FileResu
         return safeFileName;
     }
 
-    public async Task<(Stream Stream, string ContentType, string FileName)?> GetResumeAsync(string userId)
+    public async Task<(Stream Stream, string ContentType, string FileName, string Extension)?> GetResumeAsync(string userId)
     {
         var meta = await fileStorage.ReadJsonAsync<ResumeMetadata>(GetMetaPath(userId));
         if (meta == null)
@@ -88,7 +97,7 @@ public class FileResumeStorage(IFileStorageService fileStorage, ILogger<FileResu
             return null;
         }
 
-        return (fileData.Value.Stream, fileData.Value.ContentType, meta.OriginalFileName);
+        return (fileData.Value.Stream, fileData.Value.ContentType, meta.OriginalFileName, meta.Extension);
     }
 
     public async Task<StoredResumeInfo> GetResumeInfoAsync(string userId)

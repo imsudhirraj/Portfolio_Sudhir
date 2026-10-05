@@ -7,7 +7,10 @@ public class JsonPortfolioRepository(IFileStorageService fileStorage, ILogger<Js
 {
     private static string GetPortfolioPath(string userId) => Path.Combine("users", userId, "portfolio.json");
 
-    public async Task<Portfolio> GetOrCreatePortfolioAsync(string userId, CancellationToken cancellationToken = default)
+    public Task<Portfolio> GetOrCreatePortfolioAsync(string userId, CancellationToken cancellationToken = default)
+        => GetOrCreatePortfolioAsync(userId, null, null, cancellationToken);
+
+    public async Task<Portfolio> GetOrCreatePortfolioAsync(string userId, string? userName, string? userEmail, CancellationToken cancellationToken = default)
     {
         var path = GetPortfolioPath(userId);
         var existing = await fileStorage.ReadJsonAsync<Portfolio>(path, cancellationToken);
@@ -16,8 +19,11 @@ public class JsonPortfolioRepository(IFileStorageService fileStorage, ILogger<Js
             return existing;
         }
 
-        logger.LogInformation("Creating default starter portfolio for user {UserId}", userId);
-        var starter = CreateStarterPortfolio();
+        logger.LogInformation("Creating starter portfolio for user {UserId} (Name: {Name}, Email: {Email})", userId, userName, userEmail);
+        var starter = userId == "10823492384923" 
+            ? CreateSudhirStarterPortfolio() 
+            : CreateUserStarterPortfolio(userId, userName, userEmail);
+
         await fileStorage.WriteJsonAsync(path, starter, createBackup: false, cancellationToken);
         return starter;
     }
@@ -70,7 +76,49 @@ public class JsonPortfolioRepository(IFileStorageService fileStorage, ILogger<Js
         return await fileStorage.DeleteFileAsync(path);
     }
 
-    private static Portfolio CreateStarterPortfolio()
+    private static Portfolio CreateUserStarterPortfolio(string userId, string? userName, string? userEmail)
+    {
+        var name = !string.IsNullOrWhiteSpace(userName) ? userName.Trim() : "Portfolio Creator";
+        var email = !string.IsNullOrWhiteSpace(userEmail) ? userEmail.Trim() : "";
+        var baseSlug = name.ToLowerInvariant().Replace(' ', '-').Replace('.', '-');
+        var safeChars = baseSlug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray();
+        var safeSlug = safeChars.Length > 0 ? new string(safeChars) : "user";
+        var uniqueSlug = $"{safeSlug}-{Math.Abs(userId.GetHashCode() % 10000)}";
+
+        return new Portfolio
+        {
+            Profile = new Profile
+            {
+                FullName = name,
+                ProfessionalTitle = "Software Professional",
+                Email = email,
+                Location = "",
+                Website = "",
+                Github = "",
+                Linkedin = ""
+            },
+            Summary = new Summary
+            {
+                Title = "About Me",
+                Content = "Welcome to my portfolio! Upload your resume or use the AI tools to build your personalized showcase."
+            },
+            Skills =
+            [
+                new SkillItem { Name = "TypeScript", Category = "Frontend", Level = "Advanced" },
+                new SkillItem { Name = "C# / .NET", Category = "Backend", Level = "Advanced" },
+                new SkillItem { Name = "Cloud Architecture", Category = "Cloud", Level = "Intermediate" }
+            ],
+            Experience = [],
+            Projects = [],
+            Education = [],
+            Certifications = [],
+            Sections = new SectionsConfig(),
+            Theme = new ThemeConfig { Name = "developer", PrimaryColor = "#3b82f6", AccentColor = "#8b5cf6" },
+            Publication = new PublicationConfig { IsPublished = false, Slug = uniqueSlug }
+        };
+    }
+
+    private static Portfolio CreateSudhirStarterPortfolio()
     {
         return new Portfolio
         {

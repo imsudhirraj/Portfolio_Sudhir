@@ -91,9 +91,23 @@ public class AiController(
         }
 
         // Apply selected Skills (avoiding exact duplicates)
-        if (request.SelectedSkillIds != null && request.SelectedSkillIds.Count > 0)
+        var skillsToAdd = (request.SelectedSkillIds != null && request.SelectedSkillIds.Count > 0
+            ? analysis.Skills.Where(s => request.SelectedSkillIds.Contains(s.Id))
+            : analysis.Skills).ToList();
+
+        if (skillsToAdd.Count > 0)
         {
-            var skillsToAdd = analysis.Skills.Where(s => request.SelectedSkillIds.Contains(s.Id));
+            var isOnlyStarterSkills = portfolio.Skills.All(s =>
+                s.Name is "TypeScript" or "C# / .NET" or "Cloud Architecture" or
+                "C# / .NET 9" or "ASP.NET Core Web API" or "Angular & TypeScript" or
+                "Microservices Architecture" or "PostgreSQL & SQL Server" or
+                "Docker & Kubernetes" or "AWS / Azure Cloud" or "LLM & AI Integration");
+
+            if (isOnlyStarterSkills)
+            {
+                portfolio.Skills.Clear();
+            }
+
             foreach (var s in skillsToAdd)
             {
                 if (!portfolio.Skills.Any(existing => string.Equals(existing.Name, s.Name, StringComparison.OrdinalIgnoreCase)))
@@ -106,85 +120,122 @@ public class AiController(
                     });
                 }
             }
+            portfolio.Sections.Skills = true;
         }
 
         // Apply selected Experience
-        if (request.SelectedExperienceIds != null && request.SelectedExperienceIds.Count > 0)
+        var expToAdd = (request.SelectedExperienceIds != null && request.SelectedExperienceIds.Count > 0
+            ? analysis.Experience.Where(e => request.SelectedExperienceIds.Contains(e.Id))
+            : analysis.Experience).ToList();
+
+        if (expToAdd.Count > 0)
         {
-            var expToAdd = analysis.Experience.Where(e => request.SelectedExperienceIds.Contains(e.Id));
+            portfolio.Experience.RemoveAll(e => e.Company == "Tech Innovators Inc.");
+
             foreach (var e in expToAdd)
             {
-                portfolio.Experience.Add(new ExperienceItem
+                if (!portfolio.Experience.Any(existing => string.Equals(existing.Company, e.Company, StringComparison.OrdinalIgnoreCase) && string.Equals(existing.JobTitle, e.JobTitle, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Company = e.Company,
-                    JobTitle = e.JobTitle,
-                    Location = e.Location,
-                    StartDate = e.StartDate,
-                    EndDate = e.EndDate,
-                    IsCurrent = e.IsCurrent,
-                    Description = e.Description,
-                    Responsibilities = [.. e.Responsibilities],
-                    Achievements = [.. e.Achievements],
-                    Technologies = [.. e.Technologies]
-                });
+                    portfolio.Experience.Add(new ExperienceItem
+                    {
+                        Company = e.Company,
+                        JobTitle = e.JobTitle,
+                        Location = e.Location,
+                        StartDate = e.StartDate,
+                        EndDate = e.EndDate,
+                        IsCurrent = e.IsCurrent,
+                        Description = e.Description,
+                        Responsibilities = [.. e.Responsibilities],
+                        Achievements = [.. e.Achievements],
+                        Technologies = [.. e.Technologies]
+                    });
+                }
             }
+            portfolio.Sections.Experience = true;
         }
 
         // Apply selected Projects
-        if (request.SelectedProjectIds != null && request.SelectedProjectIds.Count > 0)
+        var projToAdd = (request.SelectedProjectIds != null && request.SelectedProjectIds.Count > 0
+            ? analysis.Projects.Where(p => request.SelectedProjectIds.Contains(p.Id))
+            : analysis.Projects).ToList();
+
+        if (projToAdd.Count > 0)
         {
-            var projToAdd = analysis.Projects.Where(p => request.SelectedProjectIds.Contains(p.Id));
+            portfolio.Projects.RemoveAll(p => p.Name == "PortfolioAI Platform");
+
             foreach (var p in projToAdd)
             {
-                portfolio.Projects.Add(new ProjectItem
+                if (!portfolio.Projects.Any(existing => string.Equals(existing.Name, p.Name, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Name = p.Name,
-                    Description = p.Description,
-                    Role = p.Role,
-                    Technologies = [.. p.Technologies],
-                    Responsibilities = [.. p.Responsibilities],
-                    Achievements = [.. p.Achievements],
-                    ProjectUrl = p.ProjectUrl,
-                    GithubUrl = p.GithubUrl
-                });
+                    portfolio.Projects.Add(new ProjectItem
+                    {
+                        Name = p.Name,
+                        Description = p.Description,
+                        Role = p.Role,
+                        Technologies = [.. p.Technologies],
+                        Responsibilities = [.. p.Responsibilities],
+                        Achievements = [.. p.Achievements],
+                        ProjectUrl = p.ProjectUrl,
+                        GithubUrl = p.GithubUrl
+                    });
+                }
             }
+            portfolio.Sections.Projects = true;
         }
 
         // Apply selected Education
-        if (request.SelectedEducationIds != null && request.SelectedEducationIds.Count > 0)
+        var eduToAdd = (request.SelectedEducationIds != null && request.SelectedEducationIds.Count > 0
+            ? analysis.Education.Where(ed => request.SelectedEducationIds.Contains(ed.Id))
+            : analysis.Education).ToList();
+
+        if (eduToAdd.Count > 0)
         {
-            var eduToAdd = analysis.Education.Where(ed => request.SelectedEducationIds.Contains(ed.Id));
+            portfolio.Education.RemoveAll(ed => ed.Institution == "National Institute of Technology");
+
             foreach (var ed in eduToAdd)
             {
-                portfolio.Education.Add(new EducationItem
+                if (!portfolio.Education.Any(existing => string.Equals(existing.Institution, ed.Institution, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Institution = ed.Institution,
-                    Degree = ed.Degree,
-                    FieldOfStudy = ed.FieldOfStudy,
-                    StartDate = ed.StartDate,
-                    EndDate = ed.EndDate,
-                    Grade = ed.Grade,
-                    Activities = ed.Activities
-                });
+                    portfolio.Education.Add(new EducationItem
+                    {
+                        Institution = ed.Institution,
+                        Degree = ed.Degree,
+                        FieldOfStudy = ed.FieldOfStudy,
+                        StartDate = ed.StartDate,
+                        EndDate = ed.EndDate,
+                        Grade = ed.Grade,
+                        Activities = ed.Activities
+                    });
+                }
             }
+            portfolio.Sections.Education = true;
         }
 
         // Apply selected Certifications
-        if (request.SelectedCertificationIds != null && request.SelectedCertificationIds.Count > 0)
+        var certToAdd = (request.SelectedCertificationIds != null && request.SelectedCertificationIds.Count > 0
+            ? analysis.Certifications.Where(c => request.SelectedCertificationIds.Contains(c.Id))
+            : analysis.Certifications).ToList();
+
+        if (certToAdd.Count > 0)
         {
-            var certToAdd = analysis.Certifications.Where(c => request.SelectedCertificationIds.Contains(c.Id));
+            portfolio.Certifications.RemoveAll(c => c.Name == "AWS Certified Solutions Architect - Associate");
+
             foreach (var c in certToAdd)
             {
-                portfolio.Certifications.Add(new CertificationItem
+                if (!portfolio.Certifications.Any(existing => string.Equals(existing.Name, c.Name, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Name = c.Name,
-                    Issuer = c.Issuer,
-                    IssueDate = c.IssueDate,
-                    ExpiryDate = c.ExpiryDate,
-                    CredentialUrl = c.CredentialUrl,
-                    CredentialId = c.CredentialId
-                });
+                    portfolio.Certifications.Add(new CertificationItem
+                    {
+                        Name = c.Name,
+                        Issuer = c.Issuer,
+                        IssueDate = c.IssueDate,
+                        ExpiryDate = c.ExpiryDate,
+                        CredentialUrl = c.CredentialUrl,
+                        CredentialId = c.CredentialId
+                    });
+                }
             }
+            portfolio.Sections.Certifications = true;
         }
 
         var saved = await portfolioRepository.SavePortfolioAsync(userContext.UserId, portfolio, cancellationToken);
