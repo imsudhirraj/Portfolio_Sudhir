@@ -21,16 +21,26 @@ export class OcrTextExtractorService {
 
   private async initTesseractWorker(onProgress?: (status: string) => void): Promise<any> {
     const { createWorker } = await import('tesseract.js');
+    const loggerCallback = (m: any) => {
+      if (m?.status && onProgress) {
+        const pct = typeof m.progress === 'number' && m.progress > 0 ? ` (${Math.round(m.progress * 100)}%)` : '';
+        onProgress(`${m.status}${pct}...`);
+      }
+    };
+
     try {
       const worker = await createWorker('eng', 1, {
         workerPath: '/tesseract/worker.min.js',
         corePath: '/tesseract/tesseract-core-simd.wasm.js',
-        langPath: '/tessdata'
+        langPath: '/tessdata',
+        logger: loggerCallback
       });
       return worker;
     } catch {
-      // Fallback to standard CDN tesseract if local path has any hosting constraints
-      return await createWorker('eng');
+      // Fallback to standard tesseract worker if local path has hosting constraints
+      return await createWorker('eng', 1, {
+        logger: loggerCallback
+      });
     }
   }
 
@@ -68,16 +78,21 @@ export class OcrTextExtractorService {
     file: File,
     onProgress?: (status: string) => void
   ): Promise<string> {
-    const arrayBuffer = await file.arrayBuffer();
     const pdfjsLib = await this.ensurePdfWorker();
+    let pdf: any = null;
 
     try {
       if (onProgress) onProgress('Reading PDF document structure...');
+      // Read a fresh array buffer from the file
+      const rawBuffer = await file.arrayBuffer();
+      // Pass a cloned Uint8Array so that worker transfer does not detach the original buffer
+      const dataCopy = new Uint8Array(rawBuffer.slice(0));
+
       const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(arrayBuffer),
+        data: dataCopy,
         useSystemFonts: true
       });
-      const pdf = await loadingTask.promise;
+      pdf = await loadingTask.promise;
 
       let digitalText = '';
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -132,35 +147,35 @@ export class OcrTextExtractorService {
     }
 
     // Scanned / Image-based PDF detected -> Render pages to canvas and run OCR
-    return this.performOcrOnPdfPages(arrayBuffer, onProgress);
+    if (pdf) {
+      return this.performOcrOnPdfDocument(pdf, onProgress);
+    }
+
+    // If PDF was not already loaded, fetch a fresh ArrayBuffer from the file and load
+    const freshBuffer = await file.arrayBuffer();
+    return this.performOcrOnPdfPages(freshBuffer, onProgress);
   }
 
   /**
-   * Render each page of a scanned PDF to canvas and run Tesseract OCR
+   * Render each page of an already-loaded PDFDocumentProxy to canvas and run Tesseract OCR
    */
-  public async performOcrOnPdfPages(
-    arrayBuffer: ArrayBuffer,
+  public async performOcrOnPdfDocument(
+    pdf: any,
     onProgress?: (status: string) => void
   ): Promise<string> {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       return '';
     }
 
-    const pdfjsLib = await this.ensurePdfWorker();
-    const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(arrayBuffer),
-      useSystemFonts: true
-    });
-    const pdf = await loadingTask.promise;
-
     if (onProgress) onProgress(`Scanned image PDF detected (${pdf.numPages} pages). Initializing OCR engine...`);
     const worker = await this.initTesseractWorker(onProgress);
     let fullOcrText = '';
 
     try {
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const maxPages = Math.min(pdf.numPages, 10);
+      for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
         if (onProgress) {
-          onProgress(`Running OCR on scanned page ${pageNum} of ${pdf.numPages}...`);
+          onProgress(`Running OCR on scanned page ${pageNum} of ${maxPages}...`);
         }
 
         const page = await pdf.getPage(pageNum);
@@ -184,6 +199,28 @@ export class OcrTextExtractorService {
     }
 
     return fullOcrText.trim();
+  }
+
+  /**
+   * Render each page of a scanned PDF from an ArrayBuffer to canvas and run Tesseract OCR
+   */
+  public async performOcrOnPdfPages(
+    arrayBuffer: ArrayBuffer,
+    onProgress?: (status: string) => void
+  ): Promise<string> {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return '';
+    }
+
+    const pdfjsLib = await this.ensurePdfWorker();
+    // Use a fresh cloned slice so no external ArrayBuffer is transferred/detached
+    const safeCopy = new Uint8Array(arrayBuffer.slice(0));
+    const loadingTask = pdfjsLib.getDocument({
+      data: safeCopy,
+      useSystemFonts: true
+    });
+    const pdf = await loadingTask.promise;
+    return this.performOcrOnPdfDocument(pdf, onProgress);
   }
 
   /**
