@@ -23,7 +23,7 @@ public class ResumeController(
 
     [HttpPost("upload")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10MB
-    public async Task<ActionResult<ApiResponse<object>>> UploadResume([FromForm] IFormFile file, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<object>>> UploadResume(IFormFile file, CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
         {
